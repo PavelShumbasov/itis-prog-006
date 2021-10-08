@@ -2,9 +2,11 @@ import datetime
 import os
 import sqlite3
 
-from flask import Flask, render_template, url_for, request, flash, get_flashed_messages, g, abort
+from flask import Flask, render_template, url_for, request, flash, get_flashed_messages, g, abort, session, redirect
 
 from flask_006.flask_database import FlaskDataBase
+
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DATABASE = 'flaskapp.db'
 DEBUG = True
@@ -105,9 +107,17 @@ def post_content(post_id):
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
+    fdb = FlaskDataBase(get_db())
     if request.method == 'GET':
-        return render_template('login.html', menu_url=url_menu_items)
+        if not session.get('user'):
+            return render_template('login.html', menu_url=fdb.get_menu())
+        else:
+            return render_template('log_out.html', menu_url=fdb.get_menu())
     elif request.method == 'POST':
+        # log_out = True # request.form.get("Log out")
+        # if log_out:
+        #     session.pop('user', None)
+        #     return redirect(url_for('index'))
         email = request.form.get('email')
         password = request.form.get('password')
         if not email:
@@ -117,10 +127,20 @@ def login():
                 flash('Некорректный email!', category='validation_error')
         if not password:
             flash('Пароль не указан!', category='unfilled_error')
-
+        user = fdb.get_user(email)
+        if not user:
+            flash("Пользователь не зарегистрирован.", category="error")
+        else:
+            hashpwd = user[0]['password']
+            if not check_password_hash(hashpwd, password):
+                flash("Неправильный пароль!", category='error')
+            else:
+                session.permanent = True
+                session['user'] = email
+                return redirect(url_for('index'))
         print(request)
         print(get_flashed_messages(True))
-        return render_template('login.html', menu_url=url_menu_items)
+        return render_template('login.html', menu_url=fdb.get_menu())
     else:
         raise Exception(f'Method {request.method} not allowed')
 
@@ -135,6 +155,36 @@ def close_db(error):
     """Close database connection if it exists."""
     if hasattr(g, 'link_db'):
         g.link_db.close()
+
+
+@app.route('/sign_up', methods=['POST', 'GET'])
+def sign_up():
+    fdb = FlaskDataBase(get_db())
+
+    if request.method == "POST":
+        name = request.form["name"]
+        email = request.form["email"]
+        password = request.form["password"]
+        user = fdb.get_user(email)
+        if user:
+            flash("Такой email уже зарегистрирован.", category="error")
+        else:
+            if not email:
+                flash('Email не указан!', category='unfilled_error')
+            else:
+                if '@' not in email or '.' not in email:
+                    flash('Некорректный email!', category='validation_error')
+            if len(password) > 8 and not password.isdigit() and not password.isalpha():
+                hash_password = generate_password_hash(password)
+                res = fdb.add_user(email, hash_password, name)
+                if not res:
+                    flash("You haven't been signed up.", category='error')
+                else:
+                    flash('Success!', category='success')
+            else:
+                flash('Simple password!', category='error')
+
+    return render_template('sign_up.html', menu_url=fdb.get_menu())
 
 
 if __name__ == '__main__':

@@ -57,3 +57,27 @@ class FlaskDataBase:
         except sqlite3.Error as e:
             print(f"Exception in getting post by id {post_id}: {e}")
         return False, False
+
+    def add_user(self, email, password, name):
+        try:
+            self.__cur.execute(
+                "INSERT INTO users VALUES (NULL, ?, ?, ?)",
+                (email, password, name)
+            )
+            self.__db.commit()
+        except sqlite3.Error as e:
+            print(f"Error adding post to database: {e}")
+            return False
+        return True
+
+    def get_user(self, email):
+        try:
+            self.__cur.execute(
+                f'SELECT email, password, name FROM users WHERE email = "{email}"'
+            )
+            res = self.__cur.fetchall()
+            if res:
+                return res
+        except sqlite3.Error as e:
+            print(f"Exception in getting users list: {e}")
+        return []
