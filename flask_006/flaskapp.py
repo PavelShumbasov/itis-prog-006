@@ -112,12 +112,8 @@ def login():
         if not session.get('user'):
             return render_template('login.html', menu_url=fdb.get_menu())
         else:
-            return render_template('log_out.html', menu_url=fdb.get_menu())
+            return redirect(url_for('logout'))
     elif request.method == 'POST':
-        # log_out = True # request.form.get("Log out")
-        # if log_out:
-        #     session.pop('user', None)
-        #     return redirect(url_for('index'))
         email = request.form.get('email')
         password = request.form.get('password')
         if not email:
@@ -141,6 +137,20 @@ def login():
         print(request)
         print(get_flashed_messages(True))
         return render_template('login.html', menu_url=fdb.get_menu())
+    else:
+        raise Exception(f'Method {request.method} not allowed')
+
+
+@app.route('/logout', methods=['POST', 'GET'])
+def logout():
+    fdb = FlaskDataBase(get_db())
+    if request.method == 'GET':
+        return render_template('log_out.html', menu_url=fdb.get_menu())
+
+    elif request.method == 'POST':
+        session.pop('user', None)
+        return redirect(url_for('index'))
+
     else:
         raise Exception(f'Method {request.method} not allowed')
 
