@@ -8,7 +8,6 @@ DATA_SIZE = 1024
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-
 client_socket.connect((host, port))
 server_response = client_socket.recv(DATA_SIZE)
 print(server_response.decode(ENCODING))
